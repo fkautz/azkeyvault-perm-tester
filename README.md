@@ -29,6 +29,9 @@ go run main.go -vault-url https://yourvault.vault.azure.net/ -key-name your-hsm-
 
 # Test EC key with ES256 algorithm
 go run main.go -vault-url https://yourvault.vault.azure.net/ -key-name your-ec-key -algorithm ES256
+
+# Test in Azure Government cloud
+go run main.go -vault-url https://yourvault.vault.usgovcloudapi.net/ -key-name your-key-name -gov
 ```
 
 ## Prerequisites
@@ -54,10 +57,19 @@ go run main.go -vault-url https://yourvault.vault.azure.net/ -key-name your-ec-k
 - `-algorithm` - Signature algorithm to use (default: RS256)
   - RSA: RS256, RS384, RS512, PS256, PS384, PS512
   - EC: ES256, ES256K, ES384, ES512
+- `-gov` - Use Azure Government cloud (default: false)
 
 ## HSM Key Support
 
 The program automatically detects whether a key is HSM-protected by checking the key type (RSA-HSM or EC-HSM). Use the same algorithms for both software and HSM keys.
+
+## Azure Government Cloud
+
+When working with Azure Government:
+
+1. Use the `-gov` flag to configure the SDK for government endpoints
+2. Ensure your vault URL uses the government domain: `.vault.usgovcloudapi.net`
+3. Configure Azure CLI for government cloud before authenticating (see Authentication section)
 
 ## Building
 
@@ -69,6 +81,9 @@ go build -o azkeyvault-perm-tester
 
 # Test HSM key with PS256 algorithm
 ./azkeyvault-perm-tester -vault-url https://yourvault.vault.azure.net/ -key-name your-hsm-key -algorithm PS256
+
+# Test in Azure Government cloud
+./azkeyvault-perm-tester -vault-url https://yourvault.vault.usgovcloudapi.net/ -key-name your-key-name -gov
 ```
 
 ## Authentication
@@ -82,9 +97,31 @@ The program uses Azure DefaultAzureCredential, which tries the following authent
 5. Interactive browser authentication
 
 For local development, the easiest method is to use Azure CLI:
+
+**Azure Commercial Cloud:**
 ```bash
 az login
 az account set --subscription <your-subscription-id>
+```
+
+**Azure Government Cloud:**
+```bash
+# Set the cloud environment to Azure Government
+az cloud set --name AzureUSGovernment
+
+# Login to Azure Government
+az login
+
+# Set your subscription
+az account set --subscription <your-subscription-id>
+
+# Verify you're in the correct cloud
+az cloud show --query name
+```
+
+To switch back to commercial cloud:
+```bash
+az cloud set --name AzureCloud
 ```
 
 ## Example Output

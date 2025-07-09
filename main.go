@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys"
 )
@@ -22,6 +24,7 @@ func main() {
 		testGet    = flag.Bool("test-get", true, "Test get key permission")
 		skipAll    = flag.Bool("skip-all", false, "Skip all tests by default (use with specific test flags)")
 		algorithm  = flag.String("algorithm", "RS256", "Signature algorithm to use (RS256, RS384, RS512, PS256, PS384, PS512, ES256, ES256K, ES384, ES512)")
+		govCloud   = flag.Bool("gov", false, "Use Azure Government cloud")
 	)
 	flag.Parse()
 
@@ -50,7 +53,18 @@ func main() {
 
 	ctx := context.Background()
 
-	cred, err := azidentity.NewDefaultAzureCredential(nil)
+	// Configure credentials for the appropriate cloud
+	credOptions := &azidentity.DefaultAzureCredentialOptions{}
+	if *govCloud {
+		credOptions.ClientOptions.Cloud = cloud.AzureGovernment
+		
+		// Verify the vault URL is for government cloud
+		if !strings.Contains(*vaultURL, ".vault.usgovcloudapi.net") {
+			log.Printf("Warning: Using -gov flag but vault URL doesn't match government cloud pattern (.vault.usgovcloudapi.net)")
+		}
+	}
+
+	cred, err := azidentity.NewDefaultAzureCredential(credOptions)
 	if err != nil {
 		log.Fatalf("Failed to obtain credentials: %v", err)
 	}
@@ -66,6 +80,9 @@ func main() {
 	fmt.Printf("Testing Azure Key Vault permissions for key: %s\n", *keyName)
 	fmt.Printf("Vault URL: %s\n", *vaultURL)
 	fmt.Printf("Algorithm: %s\n", sigAlgorithm)
+	if *govCloud {
+		fmt.Printf("Cloud: Azure Government\n")
+	}
 	fmt.Println("Note: HSM vs Software keys are determined by the key's protection level, not the algorithm\n")
 
 	testData := []byte("Test message for Azure Key Vault signing and verification")
